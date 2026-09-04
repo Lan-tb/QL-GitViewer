@@ -99,6 +99,14 @@ namespace QuickLook.Plugin.GitViewer.Git
                 }
             }
 
+            // 裸仓库没有工作区；普通仓库用 porcelain 格式只取稳定、可计数的状态行。
+            if (!info.IsBare)
+            {
+                var status = _runner.Run(ct, "status", "--porcelain", "--untracked-files=normal");
+                if (status.Success)
+                    info.WorkingTreeChanges = SplitLines(status.StdOut).Count;
+            }
+
             // refs/stash 不存在时退出码非 0，那就是单纯没有 stash。
             var stash = _runner.Run(ct, "rev-list", "--walk-reflogs", "--count", "refs/stash");
             if (stash.Success)

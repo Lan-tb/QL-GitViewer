@@ -55,6 +55,8 @@ namespace QuickLook.Plugin.GitViewer.Git
         public int Ahead { get; set; }
         public int Behind { get; set; }
 
+        /// <summary>工作区中已暂存、未暂存和未跟踪的改动条目数。</summary>
+        public int WorkingTreeChanges { get; set; }
         public int StashCount { get; set; }
     }
 
