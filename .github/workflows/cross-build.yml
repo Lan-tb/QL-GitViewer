@@ -1,0 +1,83 @@
+name: Cross Build Test Plugin
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare cross-targeting
+        shell: pwsh
+        run: |
+          @'
+          <Project>
+            <PropertyGroup>
+              <EnableWindowsTargeting>true</EnableWindowsTargeting>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+            </ItemGroup>
+          </Project>
+          '@ | Set-Content Directory.Build.props -Encoding utf8
+
+          ./Scripts/update-version.ps1
+
+      - name: Build net462 WPF plugin
+        shell: pwsh
+        run: |
+          dotnet msbuild QuickLook.Plugin.GitViewer.sln -restore -p:Configuration=Release -p:Platform=AnyCPU -p:PreBuildEvent= -p:EnableWindowsTargeting=true -m
+          if ($LASTEXITCODE -ne 0) {
+              throw "Cross-build failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Pack qlplugin
+        id: pack
+        shell: pwsh
+        run: |
+          $release = Join-Path $env:GITHUB_WORKSPACE 'bin/Release'
+          if (-not (Test-Path $release)) {
+              throw "Release output not found: $release"
+          }
+
+          $metadata = [xml](Get-Content (Join-Path $env:GITHUB_WORKSPACE 'QuickLook.Plugin.Metadata.config'))
+          $version = $metadata.Metadata.Version
+          $name = "QuickLook.Plugin.GitViewer-$version"
+          $zip = Join-Path $env:GITHUB_WORKSPACE "$name.zip"
+          $plugin = Join-Path $env:GITHUB_WORKSPACE "$name.qlplugin"
+
+          $files = Get-ChildItem -Path $release -Exclude *.pdb, *.xml, QuickLook.Common.dll
+          if (-not $files) {
+              throw "$release contains no files to package."
+          }
+
+          Compress-Archive -Path $files -DestinationPath $zip
+          Move-Item $zip $plugin
+
+          "version=$version" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "plugin=$name.qlplugin" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Upload qlplugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickLook.Plugin.GitViewer-${{ steps.pack.outputs.version }}
+          path: ${{ steps.pack.outputs.plugin }}
+          if-no-files-found: error
