@@ -51,6 +51,11 @@
                     </Border>
 
                     <Border Style="{StaticResource ChipBorderStyle}"
+                            Visibility="{Binding HasWorkingTreeChanges, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding WorkingTreeText}" Style="{StaticResource ChipTextStyle}" />
+                    </Border>
+
+                    <Border Style="{StaticResource ChipBorderStyle}"
                             Visibility="{Binding HasStash, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding StashText}" Style="{StaticResource ChipTextStyle}" />
                     </Border>

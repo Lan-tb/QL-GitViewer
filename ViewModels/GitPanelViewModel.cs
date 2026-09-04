@@ -44,6 +44,7 @@ namespace QuickLook.Plugin.GitViewer.ViewModels
         private string _toastText;
         private IList<GitRefInfo> _tags = new List<GitRefInfo>();
         private string _upstreamText;
+        private string _workingTreeText;
 
         public GitPanelViewModel()
         {
@@ -160,6 +161,18 @@ namespace QuickLook.Plugin.GitViewer.ViewModels
         }
 
         public bool HasSync => !string.IsNullOrEmpty(_syncText);
+
+        public string WorkingTreeText
+        {
+            get { return _workingTreeText; }
+            set
+            {
+                Set(ref _workingTreeText, value);
+                OnPropertyChanged("HasWorkingTreeChanges");
+            }
+        }
+
+        public bool HasWorkingTreeChanges => !string.IsNullOrEmpty(_workingTreeText);
 
         public string StashText
         {
@@ -375,6 +388,12 @@ namespace QuickLook.Plugin.GitViewer.ViewModels
                 UpstreamText = info.Upstream;
                 SyncText = BuildSyncText(info);
             }
+
+            if (info.WorkingTreeChanges > 0)
+                WorkingTreeText = string.Format(
+                    Translate.Get(info.WorkingTreeChanges == 1 ? "WorkingTreeChangeOne" : "WorkingTreeChangeMany",
+                        info.WorkingTreeChanges == 1 ? "{0} change" : "{0} changes"),
+                    info.WorkingTreeChanges);
 
             if (info.StashCount > 0)
                 StashText = string.Format(
