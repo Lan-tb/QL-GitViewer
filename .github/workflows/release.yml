@@ -5,6 +5,9 @@ on:
     branches:
       - 'feature/**'
     tags: ['*']
+  pull_request:
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
