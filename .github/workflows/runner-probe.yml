@@ -1,0 +1,14 @@
+name: Runner Probe
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+        run: echo "runner works"
