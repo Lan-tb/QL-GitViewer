@@ -2,12 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches:
-      - 'feature/**'
     tags: ['*']
-  pull_request:
-    branches:
-      - master
   workflow_dispatch:
 
 permissions:
@@ -15,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -27,20 +22,14 @@ jobs:
           # 历史，版本号会退化成提交哈希。必须要完整历史。
           fetch-depth: 0
 
-      - name: Build (Release)
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
-          if (-not $msbuild) {
-              throw 'MSBuild was not found on the Windows runner.'
-          }
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-          Write-Host "Using MSBuild: $msbuild"
-          & $msbuild QuickLook.Plugin.GitViewer.sln -restore -p:Configuration=Release -m
-          if ($LASTEXITCODE -ne 0) {
-              throw "MSBuild failed with exit code $LASTEXITCODE."
-          }
+      - name: Build (Release)
+        # 必须构建 .sln 而不是 .csproj：update-version.ps1 挂在
+        # QuickLook.Common.csproj 的 PreBuildEvent 上，命令里用了 $(SolutionDir)，
+        # 直接构建 csproj 时该变量为空，脚本路径会失效。
+        run: msbuild QuickLook.Plugin.GitViewer.sln -restore -p:Configuration=Release -m
 
       - name: Verify version
         shell: pwsh
